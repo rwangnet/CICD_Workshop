@@ -3,6 +3,8 @@ import { Construct } from 'constructs';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import { Stack, StackProps } from 'aws-cdk-lib';
+import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+
 
 export class PipelineCdkStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -10,6 +12,8 @@ export class PipelineCdkStack extends Stack {
 
     // Define a CodePipeline source action using GitHub
     const sourceOutput = new codepipeline.Artifact();
+    const unitTestOutput = new codepipeline.Artifact();
+
 
     const sourceAction = new codepipeline_actions.GitHubSourceAction({
       actionName: 'GitHub_Source',
@@ -20,10 +24,27 @@ export class PipelineCdkStack extends Stack {
       output: sourceOutput,
     });
 
-     // Define a dummy action as a placeholder
-     const approval = new codepipeline_actions.ManualApprovalAction({
+    // Define a dummy action as a placeholder
+    const approval = new codepipeline_actions.ManualApprovalAction({
       actionName: 'DummyApproval',
     });
+
+    const codeBuild = new codebuild.PipelineProject(this, 'CodeBuild', {
+      environment: {
+        buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
+        privileged: true,
+        computeType: codebuild.ComputeType.LARGE,
+      },
+      buildSpec: codebuild.BuildSpec.fromSourceFilename('buildspec_test.yml'),
+    });
+
+    const build = new codepipeline_actions.CodeBuildAction({
+      actionName: 'Unit-Test',
+      project: codeBuild,
+      input: sourceOutput,
+      outputs: [unitTestOutput],
+    });
+
 
     // Define the pipeline and a basic stage
     new codepipeline.Pipeline(this, 'Pipeline', {
@@ -33,8 +54,8 @@ export class PipelineCdkStack extends Stack {
           actions: [sourceAction],
         },
         {
-          stageName: 'Approval',
-          actions: [approval],
+          stageName: 'Code-Quality-Testing',
+          actions: [build],
         }
       ],
     });
