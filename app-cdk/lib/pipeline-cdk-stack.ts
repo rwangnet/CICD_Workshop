@@ -24,7 +24,7 @@ export class PipelineCdkStack extends Stack {
 
     const signerARNParameter = new ssm.StringParameter(this, 'SignerARNParam', {
       parameterName: 'signer-profile-arn',
-      stringValue: 'arn:aws:signer:us-east-1:471112945472:/signing-profiles/ecr_signing_profile',
+      stringValue: 'arn:aws:signer:us-east-1:471112945472:signing-profiles/ecr_signing_profile',
     });
 
     const signerParameterPolicy = new iam.PolicyStatement({
@@ -32,6 +32,17 @@ export class PipelineCdkStack extends Stack {
       resources: [signerARNParameter.parameterArn],
       actions: ['ssm:GetParametersByPath', 'ssm:GetParameters'],
     });
+
+    const signerPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      resources: ['*'],
+      actions: [
+        'signer:PutSigningProfile',
+        'signer:SignPayload',
+        'signer:GetRevocationStatus',
+      ],
+    });
+
 
 
     const sourceAction = new codepipeline_actions.GitHubSourceAction({
@@ -74,8 +85,6 @@ export class PipelineCdkStack extends Stack {
       buildSpec: codebuild.BuildSpec.fromSourceFilename('buildspec_docker.yml'),
     });
 
-    dockerBuild.addToRolePolicy(signerParameterPolicy);
-
     const dockerBuildRolePolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       resources: ['*'],
@@ -96,6 +105,9 @@ export class PipelineCdkStack extends Stack {
     });
 
     dockerBuild.addToRolePolicy(dockerBuildRolePolicy);
+    dockerBuild.addToRolePolicy(signerParameterPolicy);
+    dockerBuild.addToRolePolicy(signerPolicy);
+
 
     const docker = new codepipeline_actions.CodeBuildAction({
       actionName: 'Docker-Build',

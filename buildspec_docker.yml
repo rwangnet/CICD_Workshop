@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   parameter-store:
-    SIGNER_PROFILE_ARN: 'arn:aws:signer:us-east-1:471112945472:/signing-profiles/ecr_signing_profile'
+    SIGNER_PROFILE_ARN: 'arn:aws:signer:us-east-1:471112945472:signing-profile/ecr_signing_profile'
 
 phases:
   install:
