@@ -6,6 +6,7 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 
 
 interface ConsumerProps extends StackProps {
@@ -21,6 +22,16 @@ export class PipelineCdkStack extends Stack {
     const unitTestOutput = new codepipeline.Artifact();
     const dockerBuildOutput = new codepipeline.Artifact();
 
+    const signerARNParameter = new ssm.StringParameter(this, 'SignerARNParam', {
+      parameterName: 'signer-profile-arn',
+      stringValue: 'arn:aws:signer:us-east-1:471112945472:/signing-profiles/ecr_signing_profile',
+    });
+
+    const signerParameterPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      resources: [signerARNParameter.parameterArn],
+      actions: ['ssm:GetParametersByPath', 'ssm:GetParameters'],
+    });
 
 
     const sourceAction = new codepipeline_actions.GitHubSourceAction({
@@ -62,6 +73,8 @@ export class PipelineCdkStack extends Stack {
       },
       buildSpec: codebuild.BuildSpec.fromSourceFilename('buildspec_docker.yml'),
     });
+
+    dockerBuild.addToRolePolicy(signerParameterPolicy);
 
     const dockerBuildRolePolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
