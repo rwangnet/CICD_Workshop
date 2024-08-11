@@ -6,10 +6,12 @@ import { EcrCdkStack } from '../lib/ecr-cdk-stack';
 
 
 const app = new cdk.App();
-
-const testCdkStack = new AppCdkStack(app, 'test', {});
-
+  
 const ecrCdkStack = new EcrCdkStack(app, 'ecr-stack', {});
+
+const testCdkStack = new AppCdkStack(app, 'test', {
+    ecrRepository: ecrCdkStack.repository,
+  });
 
 const pipelineCdkStack = new PipelineCdkStack(app, 'pipeline-stack', {
     ecrRepository: ecrCdkStack.repository,
