@@ -7,10 +7,12 @@ import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
 
 
 interface ConsumerProps extends StackProps {
   ecrRepository: ecr.Repository,
+  fargateServiceTest: ecsPatterns.ApplicationLoadBalancedFargateService,
 }
 
 export class PipelineCdkStack extends Stack {
@@ -116,6 +118,12 @@ export class PipelineCdkStack extends Stack {
       outputs: [dockerBuildOutput],
     });
 
+    const ecsDeploy = new codepipeline_actions.EcsDeployAction({
+      actionName: 'Deploy-Fargate-Test',
+      service: props.fargateServiceTest.service,
+      input: dockerBuildOutput,
+    });
+
 
     // Define the pipeline and a basic stage
     new codepipeline.Pipeline(this, 'Pipeline', {
@@ -131,6 +139,10 @@ export class PipelineCdkStack extends Stack {
         {
           stageName: 'Docker-Push-ECR',
           actions: [docker],
+        },
+        {
+          stageName: 'Deploy-Test',
+          actions: [ecsDeploy],
         }
       ],
     });
@@ -140,5 +152,5 @@ export class PipelineCdkStack extends Stack {
       value: `https://github.com/rwangnet/CICD_Workshop`,
     });
   }
-  
+
 }
